@@ -10,7 +10,7 @@ export default function Slider() {
   const [banners, setBanners] = useState([]);
   const [activeIndex, setActiveIndex] = useState(1); 
   const [isTransitioning, setIsTransitioning] = useState(true);
-  const [isTeleporting, setIsTeleporting] = useState(false); // 🚀 THE CORE BUG FIX
+  const [isTeleporting, setIsTeleporting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   
@@ -59,11 +59,9 @@ export default function Slider() {
     banners[0], 
   ] : [];
 
-  // 🚀 AIRTIGHT TRANSITION ENGINE: Safely queues state updates and locks down race conditions
   useEffect(() => {
     if (banners.length <= 1) return;
 
-    // 1. Boundary Teleport: Forward past final slide
     if (activeIndex === slidesWithClones.length - 1) {
       setIsTeleporting(true);
       const teleportTimer = setTimeout(() => {
@@ -74,7 +72,6 @@ export default function Slider() {
       return () => clearTimeout(teleportTimer);
     }
 
-    // 2. Boundary Teleport: Backward past first slide
     if (activeIndex === 0) {
       setIsTeleporting(true);
       const teleportTimer = setTimeout(() => {
@@ -85,17 +82,15 @@ export default function Slider() {
       return () => clearTimeout(teleportTimer);
     }
 
-    // 3. Auto-Mover Engine: Paused during drags OR teleportation sequences
     if (!isDragging && !isTeleporting) {
       const autoMoveTimer = setInterval(() => {
         setIsTransitioning(true);
         setActiveIndex((prev) => prev + 1);
-      }, 2500); // Bumped up slightly to give dragging interactions more breathing room
+      }, 2500);
       return () => clearInterval(autoMoveTimer);
     }
   }, [activeIndex, isDragging, isTeleporting, banners.length, slidesWithClones.length]);
 
-  // Re-enable CSS transitions instantly right after a teleport settles
   useEffect(() => {
     if (!isTransitioning) {
       const transitionResetTimer = setTimeout(() => {
@@ -110,7 +105,7 @@ export default function Slider() {
   }
 
   const handleDragStart = (e) => {
-    if (isTeleporting) return; // 🛑 Lock inputs if the carousel is executing a boundary reset
+    if (isTeleporting) return;
     setIsDragging(true);
     setIsTransitioning(false);
     setHasMoved(false);
@@ -204,7 +199,6 @@ export default function Slider() {
         </div>
       </div>
 
-      {/* Navigation Indicators */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10 bg-black/10 px-3 py-1.5 rounded-full backdrop-blur-xs">
         {banners.map((_, idx) => (
           <button
