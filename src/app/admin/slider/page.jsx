@@ -11,6 +11,9 @@ export default function AdminSliderPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState(null);
+  
+  // 🚀 ACTIVE PREVIEW INDEX HOOK: Tracks the single block index currently previewed
+  const [activePreviewIndex, setActivePreviewIndex] = useState(null);
 
   useEffect(() => {
     async function secureSliderDashboard() {
@@ -39,6 +42,18 @@ export default function AdminSliderPage() {
 
   const handleRemoveBlock = (index) => {
     setBanners((prev) => prev.filter((_, i) => i !== index));
+    // Reset preview if active item is deleted
+    if (activePreviewIndex === index) {
+      setActivePreviewIndex(null);
+    } else if (activePreviewIndex > index) {
+      setActivePreviewIndex((prev) => prev - 1);
+    }
+  };
+
+  // 🚀 DYNAMIC MULTI-PREVIEW FILTER SELECTOR LOGIC
+  const handleTogglePreview = (index) => {
+    // If clicked a second time, close it; otherwise update state to show second item and automatically auto-hide the first
+    setActivePreviewIndex((prevIndex) => (prevIndex === index ? null : index));
   };
 
   // NATIVE HTML5 DRAG & DROP SORTING MATRIX
@@ -55,17 +70,25 @@ export default function AdminSliderPage() {
       ...remainingItems.slice(index)
     ];
 
+    // Synchronize preview indices along with the dragged sorting rows
+    if (activePreviewIndex === draggedIndex) {
+      setActivePreviewIndex(index);
+    } else if (activePreviewIndex === index) {
+      setActivePreviewIndex(draggedIndex);
+    }
+
     setDraggedIndex(index);
     setBanners(updatedList);
   };
+
   const handleSaveSliderConfiguration = async () => {
     try {
       setSaving(true);
       
-      // 1. Wipe out old references to prevent duplicate constraints failures
+      // Wipe old references to prevent duplicate constraints failures
       await supabase.from("slider_banners").delete().neq("id", 0);
 
-      // 2. Re-map display_order strictly from top to down based on the updated drag positions
+      // Re-map display_order strictly based on the updated drag positions
       const finalizedPayload = banners.map((item, idx) => ({
         image_url: item.image_url,
         redirect_url: item.redirect_url,
@@ -87,7 +110,6 @@ export default function AdminSliderPage() {
   };
 
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-sm font-semibold text-gray-400 animate-pulse">Loading slider configuration matrix...</div></div>;
-
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-12">
       <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-8">
@@ -95,41 +117,79 @@ export default function AdminSliderPage() {
           <h1 className="text-2xl font-extrabold text-gray-950">Dynamic Carousel CMS</h1>
           <p className="text-xs text-gray-400 mt-0.5">Drag blocks vertically to adjust ordering parameters seamlessly.</p>
         </div>
-        <button onClick={handleAddNewBlock} className="px-3 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold transition shadow-sm">+ Add Slide Block</button>
+        <button onClick={handleAddNewBlock} className="px-3 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer">+ Add Slide Block</button>
       </div>
 
       <div className="space-y-4 mb-8">
         {banners.map((item, idx) => (
-          <div
-            key={idx}
-            draggable={true}
-            onDragStart={() => handleDragStart(idx)}
-            onDragOver={(e) => handleDragOver(e, idx)}
-            onDragEnd={() => setDraggedIndex(null)}
-            className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center gap-4 cursor-move hover:border-pink-200 transition-all active:scale-[0.99]"
-          >
-            {/* Grab Handle Icon visual cue */}
-            <div className="text-gray-300 font-bold select-none text-base px-1">☰</div>
-            
-            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Image Asset Source URL</label>
-                <input type="text" value={item.image_url} onChange={(e) => handleInputChange(idx, "image_url", e.target.value)} placeholder="https://domain.com" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition" />
+          <div key={idx} className="flex flex-col gap-2">
+            <div
+              draggable={true}
+              onDragStart={() => handleDragStart(idx)}
+              onDragOver={(e) => handleDragOver(e, idx)}
+              onDragEnd={() => setDraggedIndex(null)}
+              className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center gap-4 cursor-move hover:border-pink-200 transition-all active:scale-[0.99]"
+            >
+              {/* Grab Handle Icon visual cue */}
+              <div className="text-gray-300 font-bold select-none text-base px-1">===</div>
+              
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Image Asset Source URL</label>
+                  <input type="text" value={item.image_url} onChange={(e) => handleInputChange(idx, "image_url", e.target.value)} placeholder="https://domain.com" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition" />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Destination Redirect Link</label>
+                  <input type="text" value={item.redirect_url} onChange={(e) => handleInputChange(idx, "redirect_url", e.target.value)} placeholder="/category/1 or https://google.com" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition" />
+                </div>
               </div>
-              <div>
-                <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Destination Redirect Link</label>
-                <input type="text" value={item.redirect_url} onChange={(e) => handleInputChange(idx, "redirect_url", e.target.value)} placeholder="/category/1 or https://google.com" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition" />
+
+              {/* Action Operations Control Area Group */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button 
+                  type="button"
+                  onClick={() => handleTogglePreview(idx)} 
+                  className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all border cursor-pointer ${
+                    activePreviewIndex === idx 
+                      ? "bg-pink-50 text-pink-600 border-pink-200" 
+                      : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {activePreviewIndex === idx ? "Hide View" : "Preview"}
+                </button>
+                <button onClick={() => handleRemoveBlock(idx)} className="text-xs text-red-400 hover:text-red-600 font-bold px-2 py-1.5 transition cursor-pointer">Delete</button>
               </div>
             </div>
 
-            <button onClick={() => handleRemoveBlock(idx)} className="text-xs text-red-400 hover:text-red-600 font-bold px-2 py-1 transition">Delete</button>
+            {/* 🚀 MUTUAL ACCORDION IMAGE CONTAINER OVERLAY: Auto hides former if open */}
+            {activePreviewIndex === idx && (
+              <div className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                {item.image_url ? (
+                  <div className="w-full h-32 sm:h-48 rounded-xl overflow-hidden bg-white border border-gray-200 relative flex items-center justify-center shadow-inner">
+                    <img 
+                      src={item.image_url} 
+                      alt="Slider Block Live Render Image" 
+                      className="max-w-full max-h-full object-contain"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "https://placehold.co";
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full py-8 text-center text-xs text-gray-400 font-semibold border border-dashed border-gray-200 rounded-xl bg-white select-none">
+                    ⚠️ Enter a valid URL inside the Image Source input to test rendering layout parameters.
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ))}
       </div>
 
       <div className="flex gap-4 justify-end border-t border-gray-50 pt-4">
-        <button onClick={() => router.push("/admin/orders")} className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-xs rounded-xl transition">Cancel</button>
-        <button onClick={handleSaveSliderConfiguration} disabled={saving} className="px-5 py-2.5 bg-[#7bc143] hover:bg-green-600 text-white font-bold text-xs rounded-xl transition shadow shadow-green-100 disabled:opacity-50">{saving ? "Syncing Configuration..." : "Save Order Parameters"}</button>
+        <button onClick={() => router.push("/admin/orders")} className="px-4 py-2.5 bg-gray-100 hover:bg-200 text-gray-600 font-bold text-xs rounded-xl transition cursor-pointer">Cancel</button>
+        <button onClick={handleSaveSliderConfiguration} disabled={saving} className="px-5 py-2.5 bg-[#7bc143] hover:bg-green-600 text-white font-bold text-xs rounded-xl transition shadow shadow-green-100 disabled:opacity-50 cursor-pointer">{saving ? "Syncing Configuration..." : "Save Order Parameters"}</button>
       </div>
     </div>
   );
