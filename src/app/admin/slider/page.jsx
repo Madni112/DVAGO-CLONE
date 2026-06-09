@@ -11,7 +11,6 @@ export default function AdminSliderPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState(null);
-
   const [activePreviewIndex, setActivePreviewIndex] = useState(null);
 
   useEffect(() => {
@@ -52,7 +51,6 @@ export default function AdminSliderPage() {
     setActivePreviewIndex((prevIndex) => (prevIndex === index ? null : index));
   };
 
-
   const handleDragStart = (index) => { setDraggedIndex(index); };
   const handleDragOver = (e, index) => {
     e.preventDefault();
@@ -79,7 +77,6 @@ export default function AdminSliderPage() {
   const handleSaveSliderConfiguration = async () => {
     try {
       setSaving(true);
-
       await supabase.from("slider_banners").delete().neq("id", 0);
 
       const finalizedPayload = banners.map((item, idx) => ({
@@ -104,7 +101,7 @@ export default function AdminSliderPage() {
 
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-sm font-semibold text-gray-400 animate-pulse">Loading slider configuration matrix...</div></div>;
   return (
-    <div className="w-full max-w-3xl mx-auto px-4 py-12">
+    <div className="w-full max-w-4xl mx-auto px-4 py-12">
       <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-8">
         <div>
           <h1 className="text-2xl font-extrabold text-gray-950">Dynamic Carousel CMS</h1>
@@ -114,63 +111,64 @@ export default function AdminSliderPage() {
       </div>
 
       <div className="space-y-4 mb-8">
-        {activePreviewIndex === idx && (
-          <div className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-200">
-            {item.image_url ? (
-              <div className="w-full h-32 sm:h-48 rounded-xl overflow-hidden bg-white border border-gray-200 relative flex items-center justify-center shadow-inner">
-                <img
-                  src={item.image_url}
-                  alt="Slider Block Live Render Image"
-                  className="max-w-full max-h-full object-contain"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = "https://placehold.co";
-                  }}
-                />
-              </div>
-            ) : (
-              <div className="w-full py-8 text-center text-xs text-gray-400 font-semibold border border-dashed border-gray-200 rounded-xl bg-white select-none">
-                ⚠️ Enter a valid URL inside the Image Source input to test rendering layout parameters.
-              </div>
-            )}
-          </div>
-        )}
         {banners.map((item, idx) => (
-          <div key={idx} className="flex flex-col gap-2">
-            <div
-              draggable={true}
-              onDragStart={() => handleDragStart(idx)}
-              onDragOver={(e) => handleDragOver(e, idx)}
-              onDragEnd={() => setDraggedIndex(null)}
-              className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center gap-4 cursor-move hover:border-pink-200 transition-all active:scale-[0.99]"
-            >
-
-              <div className="text-gray-300 font-bold select-none text-base px-1">===</div>
-
-              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Image Asset Source URL</label>
-                  <input type="text" value={item.image_url} onChange={(e) => handleInputChange(idx, "image_url", e.target.value)} placeholder="https://domain.com" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition" />
-                </div>
-                <div>
-                  <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Destination Redirect Link</label>
-                  <input type="text" value={item.redirect_url} onChange={(e) => handleInputChange(idx, "redirect_url", e.target.value)} placeholder="/category/1 or https://google.com" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition" />
-                </div>
+          <div
+            key={idx}
+            draggable={true}
+            onDragStart={() => handleDragStart(idx)}
+            onDragOver={(e) => handleDragOver(e, idx)}
+            onDragEnd={() => setDraggedIndex(null)}
+            className="bg-white border border-gray-100 rounded-3xl p-5 shadow-sm flex flex-col md:flex-row items-center gap-5 cursor-move hover:border-pink-200 transition-all active:scale-[0.99]"
+          >
+            <div className="text-gray-300 font-bold select-none text-lg hidden md:block px-1">☰</div>
+            
+            <div className="flex-1 w-full space-y-3">
+              <div>
+                <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Image Asset Source URL</label>
+                <input type="text" value={item.image_url} onChange={(e) => handleInputChange(idx, "image_url", e.target.value)} placeholder="https://domain.com" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition" />
               </div>
-
-              <div className="flex items-center gap-1 flex-shrink-0">
-                <button
+              <div>
+                <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Destination Redirect Link</label>
+                <input type="text" value={item.redirect_url} onChange={(e) => handleInputChange(idx, "redirect_url", e.target.value)} placeholder="/category/1 or https://google.com" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition" />
+              </div>
+              
+              <div className="flex gap-2 pt-1">
+                <button 
                   type="button"
-                  onClick={() => handleTogglePreview(idx)}
-                  className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all border cursor-pointer ${activePreviewIndex === idx
-                      ? "bg-pink-50 text-pink-600 border-pink-200"
+                  onClick={() => handleTogglePreview(idx)} 
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                    activePreviewIndex === idx 
+                      ? "bg-pink-50 text-pink-600 border-pink-200" 
                       : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                    }`}
+                  }`}
                 >
-                  {activePreviewIndex === idx ? "Hide View" : "Preview"}
+                  {activePreviewIndex === idx ? "Close View" : "Preview"}
                 </button>
                 <button onClick={() => handleRemoveBlock(idx)} className="text-xs text-red-400 hover:text-red-600 font-bold px-2 py-1.5 transition cursor-pointer">Delete</button>
               </div>
+            </div>
+
+            <div className="w-full md:w-56 h-28 bg-gray-50 border border-gray-200/60 rounded-2xl overflow-hidden flex items-center justify-center p-2 relative flex-shrink-0 shadow-inner select-none">
+              {activePreviewIndex === idx ? (
+                item.image_url ? (
+                  <img 
+                    src={item.image_url} 
+                    alt="" 
+                    className="max-w-full max-h-full object-contain animate-in fade-in duration-200"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = "https://placehold.co";
+                    }}
+                  />
+                ) : (
+                  <span className="text-[10px] font-bold text-red-400 tracking-wide text-center">Empty Image URL String</span>
+                )
+              ) : (
+                <div className="text-center space-y-1">
+                  <span className="block text-[18px]">👁️</span>
+                  <span className="block text-[10px] font-bold text-gray-400 tracking-wider uppercase">Preview Disabled</span>
+                </div>
+              )}
             </div>
 
           </div>
@@ -178,7 +176,7 @@ export default function AdminSliderPage() {
       </div>
 
       <div className="flex gap-4 justify-end border-t border-gray-50 pt-4">
-        <button onClick={() => router.push("/admin/orders")} className="px-4 py-2.5 bg-gray-100 hover:bg-200 text-gray-600 font-bold text-xs rounded-xl transition cursor-pointer">Cancel</button>
+        <button onClick={() => router.push("/admin/orders")} className="px-4 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-600 font-bold text-xs rounded-xl transition cursor-pointer">Cancel</button>
         <button onClick={handleSaveSliderConfiguration} disabled={saving} className="px-5 py-2.5 bg-[#7bc143] hover:bg-green-600 text-white font-bold text-xs rounded-xl transition shadow shadow-green-100 disabled:opacity-50 cursor-pointer">{saving ? "Syncing Configuration..." : "Save Order Parameters"}</button>
       </div>
     </div>
