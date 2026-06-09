@@ -193,14 +193,14 @@ export default function ProfilePage() {
             </form>
           </div>
 
-          {user && user.app_metadata?.provider === "email" && (
+          {user && user.app_metadata?.providers?.includes("email") && (
             <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
               <h2 className="text-base font-bold text-gray-900 border-b border-gray-50 pb-2 mb-4">Security Credentials</h2>
               <form onSubmit={handleChangePassword} className="space-y-3.5">
                 <div><label className="block text-[11px] text-gray-400 font-medium mb-1">Current Password</label><input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} placeholder="••••••••" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500" /></div>
                 <div><label className="block text-[11px] text-gray-400 font-medium mb-1">New Password</label><input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} placeholder="Minimum 6 characters" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500" /></div>
                 <div><label className="block text-[11px] text-gray-400 font-medium mb-1">Confirm New Password</label><input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="••••••••" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500" /></div>
-                <button type="submit" disabled={updatingPassword} className="w-full py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs font-bold transition disabled:opacity-50">{updatingPassword ? "Changing..." : "Change Password"}</button>
+                <button type="submit" disabled={updatingPassword} className="w-full py-2 bg-gray-900 hover:bg-gray-800 text-white rounded-xl text-xs font-bold transition disabled:opacity-50 cursor-pointer">{updatingPassword ? "Changing..." : "Change Password"}</button>
               </form>
             </div>
           )}
