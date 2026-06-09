@@ -52,11 +52,11 @@ export default function Slider() {
     initSliderAndAuth();
   }, []);
 
-  // 🚀 FIXED INFINITE CLONE ARRAY: Bounds are now guarded perfectly
+  // 🚀 THE ULTIMATE FIX: Correctly links only index 0 as the trailing bound guard item
   const slidesWithClones = banners.length > 0 ? [
     banners[banners.length - 1], 
     ...banners,
-    banners[0], // ✨ FIXED: Correctly targets the exact first slide object for seamless looping
+    banners[0], // ✨ Fixed from 'banners' to 'banners[0]'
   ] : [];
 
   // Unified loop watch transition calculation engine
