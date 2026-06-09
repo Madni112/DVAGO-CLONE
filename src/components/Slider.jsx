@@ -163,7 +163,7 @@ export default function Slider() {
         onTouchMove={handleDragMove}
         onTouchEnd={handleDragEnd}
         // touch-action: pan-y allows users to scroll the page vertically while swiping banners horizontally
-        style={{ cursor: 'grab', touchAction: "pan-y" }}
+        style={{ cursor: 'pointer', touchAction: "pan-y" }}
       >
         <div 
           ref={containerRef}
