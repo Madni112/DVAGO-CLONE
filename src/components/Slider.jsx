@@ -1,236 +1,196 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
+import toast from "react-hot-toast";
 import { supabase } from "@/Config/supabase";
 
-export default function Slider() {
+export default function AdminSliderPage() {
   const router = useRouter();
   const [banners, setBanners] = useState([]);
-  const [activeIndex, setActiveIndex] = useState(1); 
-  const [isTransitioning, setIsTransitioning] = useState(true);
-  const [isTeleporting, setIsTeleporting] = useState(false); // 🚀 THE CORE BUG FIX
   const [loading, setLoading] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState(null);
   
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [dragOffset, setDragOffset] = useState(0);
-  const [hasMoved, setHasMoved] = useState(false); 
-
-  const containerRef = useRef(null);
+  // 🚀 ACTIVE PREVIEW INDEX HOOK: Tracks the single block index currently previewed
+  const [activePreviewIndex, setActivePreviewIndex] = useState(null);
 
   useEffect(() => {
-    async function initSliderAndAuth() {
+    async function secureSliderDashboard() {
       try {
         setLoading(true);
         const { data: { session } } = await supabase.auth.getSession();
-        if (session?.user) {
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("is_admin")
-            .eq("id", session.user.id)
-            .maybeSingle();
-            
-          if (profile?.is_admin || session.user.app_metadata?.role === "admin") {
-            setIsAdmin(true);
-          }
-        }
+        if (!session?.user) { router.replace("/"); return; }
 
-        const { data: bData, error } = await supabase
-          .from("slider_banners")
-          .select("image_url, redirect_url")
-          .order("display_order", { ascending: true });
+        const { data: profile } = await supabase.from("profiles").select("is_admin").eq("id", session.user.id).maybeSingle();
+        if (!profile?.is_admin && session.user.app_metadata?.role !== "admin") { router.replace("/"); return; }
 
-        if (!error && bData) setBanners(bData);
-      } catch (err) {
-        console.error(err.message);
-      } finally {
-        setLoading(false);
+        const { data, error } = await supabase.from("slider_banners").select("id, image_url, redirect_url, display_order").order("display_order", { ascending: true });
+        if (!error && data) setBanners(data);
+      } catch (e) { console.error(e); } finally { setLoading(false); }
+    }
+    secureSliderDashboard();
+  }, [router]);
+
+  const handleInputChange = (index, field, value) => {
+    setBanners((prev) => prev.map((item, i) => (i === index ? { ...item, [field]: value } : item)));
+  };
+
+  const handleAddNewBlock = () => {
+    setBanners((prev) => [...prev, { image_url: "", redirect_url: "", display_order: prev.length + 1 }]);
+  };
+
+  const handleRemoveBlock = (index) => {
+    setBanners((prev) => prev.filter((_, i) => i !== index));
+    // Reset preview if active item is deleted
+    if (activePreviewIndex === index) {
+      setActivePreviewIndex(null);
+    } else if (activePreviewIndex > index) {
+      setActivePreviewIndex((prev) => prev - 1);
+    }
+  };
+
+  // 🚀 DYNAMIC MULTI-PREVIEW FILTER SELECTOR LOGIC
+  const handleTogglePreview = (index) => {
+    // If clicked a second time, close it; otherwise update state to show second item and automatically auto-hide the first
+    setActivePreviewIndex((prevIndex) => (prevIndex === index ? null : index));
+  };
+
+  // NATIVE HTML5 DRAG & DROP SORTING MATRIX
+  const handleDragStart = (index) => { setDraggedIndex(index); };
+  const handleDragOver = (e, index) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const itemToMove = banners[draggedIndex];
+    const remainingItems = banners.filter((_, i) => i !== draggedIndex);
+    const updatedList = [
+      ...remainingItems.slice(0, index),
+      itemToMove,
+      ...remainingItems.slice(index)
+    ];
+
+    // Synchronize preview indices along with the dragged sorting rows
+    if (activePreviewIndex === draggedIndex) {
+      setActivePreviewIndex(index);
+    } else if (activePreviewIndex === index) {
+      setActivePreviewIndex(draggedIndex);
+    }
+
+    setDraggedIndex(index);
+    setBanners(updatedList);
+  };
+
+  const handleSaveSliderConfiguration = async () => {
+    try {
+      setSaving(true);
+      
+      // Wipe old references to prevent duplicate constraints failures
+      await supabase.from("slider_banners").delete().neq("id", 0);
+
+      // Re-map display_order strictly based on the updated drag positions
+      const finalizedPayload = banners.map((item, idx) => ({
+        image_url: item.image_url,
+        redirect_url: item.redirect_url,
+        display_order: idx + 1
+      }));
+
+      if (finalizedPayload.length > 0) {
+        const { error } = await supabase.from("slider_banners").insert(finalizedPayload);
+        if (error) throw error;
       }
-    }
-    initSliderAndAuth();
-  }, []);
 
-  const slidesWithClones = banners.length > 0 ? [
-    banners[banners.length - 1], 
-    ...banners,
-    banners[0], 
-  ] : [];
-
-  // 🚀 AIRTIGHT TRANSITION ENGINE: Safely queues state updates and locks down race conditions
-  useEffect(() => {
-    if (banners.length <= 1) return;
-
-    // 1. Boundary Teleport: Forward past final slide
-    if (activeIndex === slidesWithClones.length - 1) {
-      setIsTeleporting(true);
-      const teleportTimer = setTimeout(() => {
-        setIsTransitioning(false);
-        setActiveIndex(1);
-        setIsTeleporting(false);
-      }, 600); 
-      return () => clearTimeout(teleportTimer);
-    }
-
-    // 2. Boundary Teleport: Backward past first slide
-    if (activeIndex === 0) {
-      setIsTeleporting(true);
-      const teleportTimer = setTimeout(() => {
-        setIsTransitioning(false);
-        setActiveIndex(slidesWithClones.length - 2);
-        setIsTeleporting(false);
-      }, 600);
-      return () => clearTimeout(teleportTimer);
-    }
-
-    // 3. Auto-Mover Engine: Paused during drags OR teleportation sequences
-    if (!isDragging && !isTeleporting) {
-      const autoMoveTimer = setInterval(() => {
-        setIsTransitioning(true);
-        setActiveIndex((prev) => prev + 1);
-      }, 2500); // Bumped up slightly to give dragging interactions more breathing room
-      return () => clearInterval(autoMoveTimer);
-    }
-  }, [activeIndex, isDragging, isTeleporting, banners.length, slidesWithClones.length]);
-
-  // Re-enable CSS transitions instantly right after a teleport settles
-  useEffect(() => {
-    if (!isTransitioning) {
-      const transitionResetTimer = setTimeout(() => {
-        setIsTransitioning(true);
-      }, 25);
-      return () => clearTimeout(transitionResetTimer);
-    }
-  }, [isTransitioning]);
-
-  if (loading || banners.length === 0) {
-    return <div className="w-full h-[180px] sm:h-[340px] bg-gray-100 rounded-2xl animate-pulse mt-4 max-w-7xl mx-auto"></div>;
-  }
-
-  const handleDragStart = (e) => {
-    if (isTeleporting) return; // 🛑 Lock inputs if the carousel is executing a boundary reset
-    setIsDragging(true);
-    setIsTransitioning(false);
-    setHasMoved(false);
-    const clientX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
-    setStartX(clientX);
-  };
-
-  const handleDragMove = (e) => {
-    if (!isDragging || isTeleporting) return;
-    const clientX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
-    const currentOffset = clientX - startX;
-
-    if (Math.abs(currentOffset) > 5) {
-      setHasMoved(true);
-    }
-
-    if (containerRef.current) {
-      const width = containerRef.current.offsetWidth;
-      const percentage = (currentOffset / width) * 100;
-      setDragOffset(percentage);
+      toast.success("Slider order configuration synchronized!");
+      router.push("/");
+    } catch (err) {
+      toast.error(`Sync aborted: ${err.message}`);
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleDragEnd = () => {
-    if (!isDragging) return;
-    setIsDragging(false);
-    setIsTransitioning(true);
-
-    if (dragOffset < -15) {
-      setActiveIndex((prev) => prev + 1);
-    } else if (dragOffset > 15) {
-      setActiveIndex((prev) => prev - 1);
-    } else {
-      setActiveIndex(activeIndex);
-    }
-    setDragOffset(0);
-    setTimeout(() => setHasMoved(false), 50);
-  };
-
-  let normalizedActive = activeIndex - 1;
-  if (activeIndex === 0) normalizedActive = banners.length - 1;
-  if (activeIndex === slidesWithClones.length - 1) normalizedActive = 0;
-
+  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-sm font-semibold text-gray-400 animate-pulse">Loading slider configuration matrix...</div></div>;
   return (
-    <div className="w-full max-w-7xl mx-auto mt-4 group select-none px-4 md:px-0 relative">
-      <div 
-        className="w-full overflow-hidden rounded-2xl border border-gray-100 shadow-sm bg-white relative"
-        onMouseDown={handleDragStart}
-        onMouseMove={handleDragMove}
-        onMouseUp={handleDragEnd}
-        onMouseLeave={handleDragEnd}
-        onTouchStart={handleDragStart}
-        onTouchMove={handleDragMove}
-        onTouchEnd={handleDragEnd}
-        style={{ cursor: isTeleporting ? 'not-allowed' : 'grab', touchAction: "pan-y" }}
-      >
-        <div 
-          ref={containerRef}
-          className="flex"
-          style={{ 
-            transform: `translateX(calc(-${activeIndex * 100}% + ${dragOffset}%))`,
-            transition: isTransitioning ? "transform 600ms cubic-bezier(0.25, 1, 0.5, 1)" : "none"
-          }}
-        >
-          {slidesWithClones.map((banner, idx) => (
-            <div 
-              key={idx} 
-              className="min-w-full h-40 sm:h-70 md:h-100 relative flex items-center justify-center bg-gray-50 select-none"
-              onClick={(e) => {
-                if (hasMoved || isTeleporting) {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  return;
-                }
-                if (!banner.redirect_url) return;
-                if (banner.redirect_url.startsWith("http")) {
-                  window.open(banner.redirect_url, "_blank");
-                } else {
-                  router.push(banner.redirect_url);
-                }
-              }}
-            >
-              <img 
-                src={banner.image_url} 
-                alt="Pharmacy Promotion Banner" 
-                className="w-full h-full object-cover md:object-fill pointer-events-none" 
-                draggable="false"
-              />
-            </div>
-          ))}
+    <div className="w-full max-w-3xl mx-auto px-4 py-12">
+      <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-8">
+        <div>
+          <h1 className="text-2xl font-extrabold text-gray-950">Dynamic Carousel CMS</h1>
+          <p className="text-xs text-gray-400 mt-0.5">Drag blocks vertically to adjust ordering parameters seamlessly.</p>
         </div>
+        <button onClick={handleAddNewBlock} className="px-3 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer">+ Add Slide Block</button>
       </div>
 
-      {/* Navigation Indicators */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10 bg-black/10 px-3 py-1.5 rounded-full backdrop-blur-xs">
-        {banners.map((_, idx) => (
-          <button
-            key={idx}
-            type="button"
-            onClick={() => { 
-              if (!isDragging && !isTeleporting) { 
-                setIsTransitioning(true); 
-                setActiveIndex(idx + 1); 
-              } 
-            }}
-            className={`h-1.5 transition-all duration-300 rounded-full cursor-pointer ${normalizedActive === idx ? "w-6 bg-pink-600" : "w-1.5 bg-white/70"}`}
-          />
+      <div className="space-y-4 mb-8">
+        {banners.map((item, idx) => (
+          <div key={idx} className="flex flex-col gap-2">
+            <div
+              draggable={true}
+              onDragStart={() => handleDragStart(idx)}
+              onDragOver={(e) => handleDragOver(e, idx)}
+              onDragEnd={() => setDraggedIndex(null)}
+              className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center gap-4 cursor-move hover:border-pink-200 transition-all active:scale-[0.99]"
+            >
+              {/* Grab Handle Icon visual cue */}
+              <div className="text-gray-300 font-bold select-none text-base px-1">===</div>
+              
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Image Asset Source URL</label>
+                  <input type="text" value={item.image_url} onChange={(e) => handleInputChange(idx, "image_url", e.target.value)} placeholder="https://domain.com" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition" />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Destination Redirect Link</label>
+                  <input type="text" value={item.redirect_url} onChange={(e) => handleInputChange(idx, "redirect_url", e.target.value)} placeholder="/category/1 or https://google.com" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition" />
+                </div>
+              </div>
+
+              {/* Action Operations Control Area Group */}
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button 
+                  type="button"
+                  onClick={() => handleTogglePreview(idx)} 
+                  className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all border cursor-pointer ${
+                    activePreviewIndex === idx 
+                      ? "bg-pink-50 text-pink-600 border-pink-200" 
+                      : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {activePreviewIndex === idx ? "Hide View" : "Preview"}
+                </button>
+                <button onClick={() => handleRemoveBlock(idx)} className="text-xs text-red-400 hover:text-red-600 font-bold px-2 py-1.5 transition cursor-pointer">Delete</button>
+              </div>
+            </div>
+
+            {/* 🚀 MUTUAL ACCORDION IMAGE CONTAINER OVERLAY: Auto hides former if open */}
+            {activePreviewIndex === idx && (
+              <div className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                {item.image_url ? (
+                  <div className="w-full h-32 sm:h-48 rounded-xl overflow-hidden bg-white border border-gray-200 relative flex items-center justify-center shadow-inner">
+                    <img 
+                      src={item.image_url} 
+                      alt="Slider Block Live Render Image" 
+                      className="max-w-full max-h-full object-contain"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "https://placehold.co";
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full py-8 text-center text-xs text-gray-400 font-semibold border border-dashed border-gray-200 rounded-xl bg-white select-none">
+                    ⚠️ Enter a valid URL inside the Image Source input to test rendering layout parameters.
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         ))}
       </div>
 
-      {isAdmin && (
-        <Link 
-          href="/admin/slider" 
-          className="absolute top-4 right-8 z-20 px-3 py-2 bg-gray-900/90 hover:bg-gray-900 text-white rounded-xl text-xs font-bold transition-all shadow-md backdrop-blur-xs flex items-center gap-1.5 hover:scale-105 active:scale-[0.98] border border-white/10"
-        >
-          <span>⚙️</span>
-          <span>Edit Slider</span>
-        </Link>
-      )}
-
+      <div className="flex gap-4 justify-end border-t border-gray-50 pt-4">
+        <button onClick={() => router.push("/admin/orders")} className="px-4 py-2.5 bg-gray-100 hover:bg-200 text-gray-600 font-bold text-xs rounded-xl transition cursor-pointer">Cancel</button>
+        <button onClick={handleSaveSliderConfiguration} disabled={saving} className="px-5 py-2.5 bg-[#7bc143] hover:bg-green-600 text-white font-bold text-xs rounded-xl transition shadow shadow-green-100 disabled:opacity-50 cursor-pointer">{saving ? "Syncing Configuration..." : "Save Order Parameters"}</button>
+      </div>
     </div>
   );
 }
