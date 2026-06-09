@@ -149,7 +149,7 @@ export default function AdminSliderPage() {
               activePreviewIndex === idx ? "border-pink-300 ring-2 ring-pink-50" : "border-gray-100 hover:border-pink-200"
             }`}
           >
-            <div className="text-gray-300 font-bold select-none text-base px-1">Explanation panel row indicator element text placeholder structure placeholder string line formatting block element block text tracking data items placeholder label elements structure row formatting tag list ☰</div>
+            <div className="text-gray-300 font-bold select-none text-base px-1">☰</div>
             
             <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
