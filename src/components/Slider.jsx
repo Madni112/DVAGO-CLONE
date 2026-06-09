@@ -58,20 +58,20 @@ export default function Slider() {
     banners[0],                  
   ] : [];
 
-  // 🚀 UNIFIED WATCH ENGINE: Handles auto-moving, user drags, and instant teleport boundaries safely
+  // 🚀 FIX: Auto-mover interval safely pauses during dragging sessions
   useEffect(() => {
     if (banners.length <= 1) return;
 
-    // 1. Teleport logic if we run past the final slide boundary
+    // 1. Teleport logic past the final slide boundary
     if (activeIndex === slidesWithClones.length - 1) {
       const teleportTimer = setTimeout(() => {
         setIsTransitioning(false);
         setActiveIndex(1);
-      }, 600); // Wait for the forward animation slide to finish first
+      }, 600); 
       return () => clearTimeout(teleportTimer);
     }
 
-    // 2. Teleport logic if we drag backward past the first slide boundary
+    // 2. Teleport logic backward past the first slide boundary
     if (activeIndex === 0) {
       const teleportTimer = setTimeout(() => {
         setIsTransitioning(false);
@@ -80,7 +80,7 @@ export default function Slider() {
       return () => clearTimeout(teleportTimer);
     }
 
-    // 3. Auto-mover interval engine runs safely ONLY when slide is inside real indexes and not being dragged
+    // 3. Auto-mover only runs if the user is NOT active dragging
     if (!isDragging) {
       const autoMoveTimer = setInterval(() => {
         setIsTransitioning(true);
@@ -88,9 +88,9 @@ export default function Slider() {
       }, 2000);
       return () => clearInterval(autoMoveTimer);
     }
-  }, [activeIndex, isDragging, banners.length]);
+  }, [activeIndex, isDragging, banners.length, slidesWithClones.length]);
 
-  // Re-enable smooth transition vectors instantly right after an invisible teleport finishes
+  // Re-enable smooth transitions right after an invisible teleport finishes
   useEffect(() => {
     if (!isTransitioning) {
       const transitionResetTimer = setTimeout(() => {
@@ -104,29 +104,19 @@ export default function Slider() {
     return <div className="w-full h-[180px] sm:h-[340px] bg-gray-100 rounded-2xl animate-pulse mt-4 max-w-7xl mx-auto"></div>;
   }
 
-  const handleNextSlide = () => {
-    if (isDragging) return;
-    setIsTransitioning(true);
-    setActiveIndex((prev) => prev + 1);
-  };
-
-  const handlePrevSlide = () => {
-    if (isDragging) return;
-    setIsTransitioning(true);
-    setActiveIndex((prev) => prev - 1);
-  };
-
   const handleDragStart = (e) => {
     setIsDragging(true);
     setIsTransitioning(false);
     setHasMoved(false);
-    const clientX = e.type === "touchstart" ? e.touches.clientX : e.clientX;
+    // Correctly extract client coordinates on touch screens
+    const clientX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
     setStartX(clientX);
   };
 
   const handleDragMove = (e) => {
     if (!isDragging) return;
-    const clientX = e.type === "touchmove" ? e.touches.clientX : e.clientX;
+    
+    const clientX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
     const currentOffset = clientX - startX;
 
     if (Math.abs(currentOffset) > 5) {
@@ -145,6 +135,7 @@ export default function Slider() {
     setIsDragging(false);
     setIsTransitioning(true);
 
+    // Calculate if the swipe distance is enough to change slides
     if (dragOffset < -15) {
       setActiveIndex((prev) => prev + 1);
     } else if (dragOffset > 15) {
@@ -171,7 +162,8 @@ export default function Slider() {
         onTouchStart={handleDragStart}
         onTouchMove={handleDragMove}
         onTouchEnd={handleDragEnd}
-        style={{ cursor: 'default' }}
+        // touch-action: pan-y allows users to scroll the page vertically while swiping banners horizontally
+        style={{ cursor: 'grab', touchAction: "pan-y" }}
       >
         <div 
           ref={containerRef}
@@ -210,6 +202,7 @@ export default function Slider() {
         </div>
       </div>
 
+      {/* Navigation Bullets indicator */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10 bg-black/10 px-3 py-1.5 rounded-full backdrop-blur-xs">
         {banners.map((_, idx) => (
           <button
