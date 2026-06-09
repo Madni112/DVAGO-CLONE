@@ -11,8 +11,7 @@ export default function AdminSliderPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState(null);
-  
-  // 🚀 ACTIVE PREVIEW INDEX HOOK: Tracks the single block index currently previewed
+
   const [activePreviewIndex, setActivePreviewIndex] = useState(null);
 
   useEffect(() => {
@@ -42,7 +41,6 @@ export default function AdminSliderPage() {
 
   const handleRemoveBlock = (index) => {
     setBanners((prev) => prev.filter((_, i) => i !== index));
-    // Reset preview if active item is deleted
     if (activePreviewIndex === index) {
       setActivePreviewIndex(null);
     } else if (activePreviewIndex > index) {
@@ -50,13 +48,11 @@ export default function AdminSliderPage() {
     }
   };
 
-  // 🚀 DYNAMIC MULTI-PREVIEW FILTER SELECTOR LOGIC
   const handleTogglePreview = (index) => {
-    // If clicked a second time, close it; otherwise update state to show second item and automatically auto-hide the first
     setActivePreviewIndex((prevIndex) => (prevIndex === index ? null : index));
   };
 
-  // NATIVE HTML5 DRAG & DROP SORTING MATRIX
+
   const handleDragStart = (index) => { setDraggedIndex(index); };
   const handleDragOver = (e, index) => {
     e.preventDefault();
@@ -70,7 +66,6 @@ export default function AdminSliderPage() {
       ...remainingItems.slice(index)
     ];
 
-    // Synchronize preview indices along with the dragged sorting rows
     if (activePreviewIndex === draggedIndex) {
       setActivePreviewIndex(index);
     } else if (activePreviewIndex === index) {
@@ -84,11 +79,9 @@ export default function AdminSliderPage() {
   const handleSaveSliderConfiguration = async () => {
     try {
       setSaving(true);
-      
-      // Wipe old references to prevent duplicate constraints failures
+
       await supabase.from("slider_banners").delete().neq("id", 0);
 
-      // Re-map display_order strictly based on the updated drag positions
       const finalizedPayload = banners.map((item, idx) => ({
         image_url: item.image_url,
         redirect_url: item.redirect_url,
@@ -121,6 +114,27 @@ export default function AdminSliderPage() {
       </div>
 
       <div className="space-y-4 mb-8">
+        {activePreviewIndex === idx && (
+          <div className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-200">
+            {item.image_url ? (
+              <div className="w-full h-32 sm:h-48 rounded-xl overflow-hidden bg-white border border-gray-200 relative flex items-center justify-center shadow-inner">
+                <img
+                  src={item.image_url}
+                  alt="Slider Block Live Render Image"
+                  className="max-w-full max-h-full object-contain"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.src = "https://placehold.co";
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="w-full py-8 text-center text-xs text-gray-400 font-semibold border border-dashed border-gray-200 rounded-xl bg-white select-none">
+                ⚠️ Enter a valid URL inside the Image Source input to test rendering layout parameters.
+              </div>
+            )}
+          </div>
+        )}
         {banners.map((item, idx) => (
           <div key={idx} className="flex flex-col gap-2">
             <div
@@ -130,9 +144,9 @@ export default function AdminSliderPage() {
               onDragEnd={() => setDraggedIndex(null)}
               className="bg-white border border-gray-100 rounded-2xl p-4 shadow-sm flex items-center gap-4 cursor-move hover:border-pink-200 transition-all active:scale-[0.99]"
             >
-              {/* Grab Handle Icon visual cue */}
+
               <div className="text-gray-300 font-bold select-none text-base px-1">===</div>
-              
+
               <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Image Asset Source URL</label>
@@ -144,16 +158,14 @@ export default function AdminSliderPage() {
                 </div>
               </div>
 
-              {/* Action Operations Control Area Group */}
               <div className="flex items-center gap-1 flex-shrink-0">
-                <button 
+                <button
                   type="button"
-                  onClick={() => handleTogglePreview(idx)} 
-                  className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all border cursor-pointer ${
-                    activePreviewIndex === idx 
-                      ? "bg-pink-50 text-pink-600 border-pink-200" 
+                  onClick={() => handleTogglePreview(idx)}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-lg transition-all border cursor-pointer ${activePreviewIndex === idx
+                      ? "bg-pink-50 text-pink-600 border-pink-200"
                       : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                  }`}
+                    }`}
                 >
                   {activePreviewIndex === idx ? "Hide View" : "Preview"}
                 </button>
@@ -161,28 +173,6 @@ export default function AdminSliderPage() {
               </div>
             </div>
 
-            {/* 🚀 MUTUAL ACCORDION IMAGE CONTAINER OVERLAY: Auto hides former if open */}
-            {activePreviewIndex === idx && (
-              <div className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                {item.image_url ? (
-                  <div className="w-full h-32 sm:h-48 rounded-xl overflow-hidden bg-white border border-gray-200 relative flex items-center justify-center shadow-inner">
-                    <img 
-                      src={item.image_url} 
-                      alt="Slider Block Live Render Image" 
-                      className="max-w-full max-h-full object-contain"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = "https://placehold.co";
-                      }}
-                    />
-                  </div>
-                ) : (
-                  <div className="w-full py-8 text-center text-xs text-gray-400 font-semibold border border-dashed border-gray-200 rounded-xl bg-white select-none">
-                    ⚠️ Enter a valid URL inside the Image Source input to test rendering layout parameters.
-                  </div>
-                )}
-              </div>
-            )}
           </div>
         ))}
       </div>
