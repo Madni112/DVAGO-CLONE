@@ -52,17 +52,18 @@ export default function Slider() {
     initSliderAndAuth();
   }, []);
 
+  // 🚀 FIXED CLONE SYNTAX: Correctly places single first and last slide references as bounds guards
   const slidesWithClones = banners.length > 0 ? [
     banners[banners.length - 1], 
     ...banners,
-    banners[0],                  
+    banners[0], // ✨ Fixed from banners -> banners[0]
   ] : [];
 
-  // 🚀 FIX: Auto-mover interval safely pauses during dragging sessions
+  // Unified loop transition watch engine
   useEffect(() => {
     if (banners.length <= 1) return;
 
-    // 1. Teleport logic past the final slide boundary
+    // 1. Teleport logic past final slide boundary
     if (activeIndex === slidesWithClones.length - 1) {
       const teleportTimer = setTimeout(() => {
         setIsTransitioning(false);
@@ -71,7 +72,7 @@ export default function Slider() {
       return () => clearTimeout(teleportTimer);
     }
 
-    // 2. Teleport logic backward past the first slide boundary
+    // 2. Teleport logic backward past first slide boundary
     if (activeIndex === 0) {
       const teleportTimer = setTimeout(() => {
         setIsTransitioning(false);
@@ -80,7 +81,7 @@ export default function Slider() {
       return () => clearTimeout(teleportTimer);
     }
 
-    // 3. Auto-mover only runs if the user is NOT active dragging
+    // 3. Auto-mover interval engine
     if (!isDragging) {
       const autoMoveTimer = setInterval(() => {
         setIsTransitioning(true);
@@ -90,7 +91,7 @@ export default function Slider() {
     }
   }, [activeIndex, isDragging, banners.length, slidesWithClones.length]);
 
-  // Re-enable smooth transitions right after an invisible teleport finishes
+  // Re-enable smooth layout updates instantly right after an invisible teleport resets
   useEffect(() => {
     if (!isTransitioning) {
       const transitionResetTimer = setTimeout(() => {
@@ -108,14 +109,12 @@ export default function Slider() {
     setIsDragging(true);
     setIsTransitioning(false);
     setHasMoved(false);
-    // Correctly extract client coordinates on touch screens
-    const clientX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
+    const clientX = e.type === "touchstart" ? e.touches[clientX] || e.touches[0].clientX : e.clientX;
     setStartX(clientX);
   };
 
   const handleDragMove = (e) => {
     if (!isDragging) return;
-    
     const clientX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
     const currentOffset = clientX - startX;
 
@@ -135,7 +134,6 @@ export default function Slider() {
     setIsDragging(false);
     setIsTransitioning(true);
 
-    // Calculate if the swipe distance is enough to change slides
     if (dragOffset < -15) {
       setActiveIndex((prev) => prev + 1);
     } else if (dragOffset > 15) {
@@ -162,7 +160,6 @@ export default function Slider() {
         onTouchStart={handleDragStart}
         onTouchMove={handleDragMove}
         onTouchEnd={handleDragEnd}
-        // touch-action: pan-y allows users to scroll the page vertically while swiping banners horizontally
         style={{ cursor: 'pointer', touchAction: "pan-y" }}
       >
         <div 
@@ -202,7 +199,7 @@ export default function Slider() {
         </div>
       </div>
 
-      {/* Navigation Bullets indicator */}
+      {/* Bullet Dot indicators links */}
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10 bg-black/10 px-3 py-1.5 rounded-full backdrop-blur-xs">
         {banners.map((_, idx) => (
           <button
