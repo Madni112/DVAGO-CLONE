@@ -10,6 +10,7 @@ export default function Slider() {
   const [banners, setBanners] = useState([]);
   const [activeIndex, setActiveIndex] = useState(1); 
   const [isTransitioning, setIsTransitioning] = useState(true);
+  const [isTeleporting, setIsTeleporting] = useState(false); // 🚀 THE CORE BUG FIX
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   
@@ -52,51 +53,54 @@ export default function Slider() {
     initSliderAndAuth();
   }, []);
 
-  // 🚀 THE ULTIMATE FIX: Correctly links only index 0 as the trailing bound guard item
   const slidesWithClones = banners.length > 0 ? [
     banners[banners.length - 1], 
     ...banners,
-    banners[0], // ✨ Fixed from 'banners' to 'banners[0]'
+    banners[0], 
   ] : [];
 
-  // Unified loop watch transition calculation engine
+  // 🚀 AIRTIGHT TRANSITION ENGINE: Safely queues state updates and locks down race conditions
   useEffect(() => {
     if (banners.length <= 1) return;
 
-    // 1. Teleport logic past final slide boundary
+    // 1. Boundary Teleport: Forward past final slide
     if (activeIndex === slidesWithClones.length - 1) {
+      setIsTeleporting(true);
       const teleportTimer = setTimeout(() => {
         setIsTransitioning(false);
         setActiveIndex(1);
+        setIsTeleporting(false);
       }, 600); 
       return () => clearTimeout(teleportTimer);
     }
 
-    // 2. Teleport logic backward past first slide boundary
+    // 2. Boundary Teleport: Backward past first slide
     if (activeIndex === 0) {
+      setIsTeleporting(true);
       const teleportTimer = setTimeout(() => {
         setIsTransitioning(false);
         setActiveIndex(slidesWithClones.length - 2);
+        setIsTeleporting(false);
       }, 600);
       return () => clearTimeout(teleportTimer);
     }
 
-    // 3. Automated rotation loop (paused only when dragging)
-    if (!isDragging) {
+    // 3. Auto-Mover Engine: Paused during drags OR teleportation sequences
+    if (!isDragging && !isTeleporting) {
       const autoMoveTimer = setInterval(() => {
         setIsTransitioning(true);
         setActiveIndex((prev) => prev + 1);
-      }, 2000);
+      }, 2500); // Bumped up slightly to give dragging interactions more breathing room
       return () => clearInterval(autoMoveTimer);
     }
-  }, [activeIndex, isDragging, banners.length, slidesWithClones.length]);
+  }, [activeIndex, isDragging, isTeleporting, banners.length, slidesWithClones.length]);
 
-  // Instantly re-enable smooth css transitions right after an invisible teleport finishes
+  // Re-enable CSS transitions instantly right after a teleport settles
   useEffect(() => {
     if (!isTransitioning) {
       const transitionResetTimer = setTimeout(() => {
         setIsTransitioning(true);
-      }, 20);
+      }, 25);
       return () => clearTimeout(transitionResetTimer);
     }
   }, [isTransitioning]);
@@ -106,6 +110,7 @@ export default function Slider() {
   }
 
   const handleDragStart = (e) => {
+    if (isTeleporting) return; // 🛑 Lock inputs if the carousel is executing a boundary reset
     setIsDragging(true);
     setIsTransitioning(false);
     setHasMoved(false);
@@ -114,7 +119,7 @@ export default function Slider() {
   };
 
   const handleDragMove = (e) => {
-    if (!isDragging) return;
+    if (!isDragging || isTeleporting) return;
     const clientX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
     const currentOffset = clientX - startX;
 
@@ -160,7 +165,7 @@ export default function Slider() {
         onTouchStart={handleDragStart}
         onTouchMove={handleDragMove}
         onTouchEnd={handleDragEnd}
-        style={{ cursor: 'grab', touchAction: "pan-y" }}
+        style={{ cursor: isTeleporting ? 'not-allowed' : 'grab', touchAction: "pan-y" }}
       >
         <div 
           ref={containerRef}
@@ -175,7 +180,7 @@ export default function Slider() {
               key={idx} 
               className="min-w-full h-40 sm:h-70 md:h-100 relative flex items-center justify-center bg-gray-50 select-none"
               onClick={(e) => {
-                if (hasMoved) {
+                if (hasMoved || isTeleporting) {
                   e.preventDefault();
                   e.stopPropagation();
                   return;
@@ -205,7 +210,12 @@ export default function Slider() {
           <button
             key={idx}
             type="button"
-            onClick={() => { if (!isDragging) { setIsTransitioning(true); setActiveIndex(idx + 1); } }}
+            onClick={() => { 
+              if (!isDragging && !isTeleporting) { 
+                setIsTransitioning(true); 
+                setActiveIndex(idx + 1); 
+              } 
+            }}
             className={`h-1.5 transition-all duration-300 rounded-full cursor-pointer ${normalizedActive === idx ? "w-6 bg-pink-600" : "w-1.5 bg-white/70"}`}
           />
         ))}
