@@ -193,7 +193,7 @@ export default function ProfilePage() {
             </form>
           </div>
 
-          {user && user.app_metadata?.providers?.includes("email") && (
+          {user && !user.identities?.some(id => id.provider === "google") && (
             <div className="bg-white border border-gray-100 rounded-2xl p-6 shadow-sm">
               <h2 className="text-base font-bold text-gray-900 border-b border-gray-50 pb-2 mb-4">Security Credentials</h2>
               <form onSubmit={handleChangePassword} className="space-y-3.5">
