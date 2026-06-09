@@ -102,7 +102,7 @@ export default function AdminSliderPage() {
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="text-sm font-semibold text-gray-400 animate-pulse">Loading slider configuration matrix...</div></div>;
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-12">
-      <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-6">
+      <div className="flex justify-between items-center border-b border-gray-100 pb-4 mb-8">
         <div>
           <h1 className="text-2xl font-extrabold text-gray-950">Dynamic Carousel CMS</h1>
           <p className="text-xs text-gray-400 mt-0.5">Drag blocks vertically to adjust ordering parameters seamlessly.</p>
@@ -110,71 +110,75 @@ export default function AdminSliderPage() {
         <button onClick={handleAddNewBlock} className="px-3 py-2 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer">+ Add Slide Block</button>
       </div>
 
-      {activePreviewIndex !== null && (
-        <div className="w-full bg-gray-50 border border-gray-100 rounded-3xl p-4 mb-6 animate-in fade-in slide-in-from-top-3 duration-200">
-          <div className="flex justify-between items-center mb-2 px-1">
-            <span className="text-[10px] font-bold text-pink-600 uppercase tracking-wider">Live View Screen (Block #{activePreviewIndex + 1})</span>
-            <button onClick={() => setActivePreviewIndex(null)} className="text-gray-400 hover:text-gray-600 text-xs font-bold cursor-pointer">Hide View ✕</button>
-          </div>
-          
-          {banners[activePreviewIndex]?.image_url ? (
-            <div className="w-full h-36 sm:h-56 rounded-2xl overflow-hidden bg-white border border-gray-200 p-2 flex items-center justify-center shadow-inner">
-              <img 
-                src={banners[activePreviewIndex].image_url} 
-                alt="" 
-                className="max-w-full max-h-full object-contain"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "https://placehold.co";
-                }}
-              />
-            </div>
-          ) : (
-            <div className="w-full py-12 text-center text-xs text-gray-400 font-semibold border border-dashed border-gray-200 rounded-2xl bg-white select-none">
-              ⚠️ Enter a valid image asset link below to review rendering guidelines.
-            </div>
-          )}
-        </div>
-      )}
-
-      <div className="space-y-4 mb-8">
+      <div className="space-y-6 mb-8">
         {banners.map((item, idx) => (
-          <div
-            key={idx}
-            draggable={true}
-            onDragStart={() => handleDragStart(idx)}
-            onDragOver={(e) => handleDragOver(e, idx)}
-            onDragEnd={() => setDraggedIndex(null)}
-            className={`bg-white border rounded-2xl p-4 shadow-sm flex items-center gap-4 cursor-move transition-all active:scale-[0.99] ${
-              activePreviewIndex === idx ? "border-pink-300 ring-2 ring-pink-50" : "border-gray-100 hover:border-pink-200"
-            }`}
-          >
-            <div className="text-gray-300 font-bold select-none text-base px-1">☰</div>
+          <div key={idx} className="flex flex-col gap-2">
             
-            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Image Asset Source URL</label>
-                <input type="text" value={item.image_url} onChange={(e) => handleInputChange(idx, "image_url", e.target.value)} placeholder="https://domain.com" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition" />
+            {/* 🚀 LOCAL TOP ACCORDION CONTAINER: Renders right above its own box row */}
+            {activePreviewIndex === idx && (
+              <div className="w-full bg-gray-50 border border-gray-100 rounded-2xl p-3 animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="flex justify-between items-center mb-1.5 px-1">
+                  <span className="text-[10px] font-black text-pink-600 uppercase tracking-wider">Live Banner Render (Block #{idx + 1})</span>
+                  <button type="button" onClick={() => setActivePreviewIndex(null)} className="text-gray-400 hover:text-gray-600 text-[10px] font-bold cursor-pointer">Hide ✕</button>
+                </div>
+                
+                {item.image_url ? (
+                  <div className="w-full h-32 sm:h-44 rounded-xl overflow-hidden bg-white border border-gray-200 relative flex items-center justify-center shadow-inner">
+                    <img 
+                      src={item.image_url} 
+                      alt="" 
+                      className="max-w-full max-h-full object-contain"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = "https://placehold.co";
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div className="w-full py-6 text-center text-xs text-gray-400 font-semibold border border-dashed border-gray-200 rounded-xl bg-white select-none">
+                    ⚠️ Provide a text image source string link to inspect render boundaries.
+                  </div>
+                )}
               </div>
-              <div>
-                <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Destination Redirect Link</label>
-                <input type="text" value={item.redirect_url} onChange={(e) => handleInputChange(idx, "redirect_url", e.target.value)} placeholder="/category/1 or https://google.com" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition" />
-              </div>
-            </div>
+            )}
 
-            <div className="flex items-center gap-1 flex-shrink-0">
-              <button 
-                type="button"
-                onClick={() => handleTogglePreview(idx)} 
-                className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all border cursor-pointer ${
-                  activePreviewIndex === idx 
-                    ? "bg-pink-600 border-pink-600 text-white shadow-sm" 
-                    : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                {activePreviewIndex === idx ? "Viewing" : "Preview"}
-              </button>
-              <button onClick={() => handleRemoveBlock(idx)} className="text-xs text-red-400 hover:text-red-600 font-bold px-2 py-1.5 transition cursor-pointer">Delete</button>
+            {/* Input Config Card Row block container panel */}
+            <div
+              draggable={true}
+              onDragStart={() => handleDragStart(idx)}
+              onDragOver={(e) => handleDragOver(e, idx)}
+              onDragEnd={() => setDraggedIndex(null)}
+              className={`bg-white border p-4 shadow-sm flex items-center gap-4 cursor-move rounded-2xl transition-all active:scale-[0.99] ${
+                activePreviewIndex === idx ? "border-pink-300 ring-2 ring-pink-50" : "border-gray-100 hover:border-pink-200"
+              }`}
+            >
+              <div className="text-gray-300 font-bold select-none text-base px-1">☰</div>
+              
+              <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Image Asset Source URL</label>
+                  <input type="text" value={item.image_url} onChange={(e) => handleInputChange(idx, "image_url", e.target.value)} placeholder="https://domain.com" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition" />
+                </div>
+                <div>
+                  <label className="block text-[10px] text-gray-400 font-bold uppercase mb-1">Destination Redirect Link</label>
+                  <input type="text" value={item.redirect_url} onChange={(e) => handleInputChange(idx, "redirect_url", e.target.value)} placeholder="/category/1 or https://google.com" className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs text-gray-800 focus:outline-none focus:ring-2 focus:ring-pink-500 focus:bg-white transition" />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1 flex-shrink-0">
+                <button 
+                  type="button"
+                  onClick={() => handleTogglePreview(idx)} 
+                  className={`text-xs font-bold px-3 py-1.5 rounded-xl transition-all border cursor-pointer ${
+                    activePreviewIndex === idx 
+                      ? "bg-pink-600 border-pink-600 text-white shadow-sm" 
+                      : "bg-white border-gray-200 text-gray-600 hover:bg-gray-50"
+                  }`}
+                >
+                  {activePreviewIndex === idx ? "Viewing" : "Preview"}
+                </button>
+                <button onClick={() => handleRemoveBlock(idx)} className="text-xs text-red-400 hover:text-red-600 font-bold px-2 py-1.5 transition cursor-pointer">Delete</button>
+              </div>
             </div>
 
           </div>
