@@ -14,6 +14,7 @@ export default function CategoriesSlider() {
   const [startX, setStartX] = useState(0);
   const [scrollLeftState, setScrollLeftState] = useState(0);
   const [hasMoved, setHasMoved] = useState(false);
+  const [isSnappingActive, setIsSnappingActive] = useState(true);
 
   const scrollRef = useRef(null);
 
@@ -69,12 +70,17 @@ export default function CategoriesSlider() {
   const handleScrollClick = (direction) => {
     if (scrollRef.current) {
       const scrollAmount = direction === "next" ? 240 : -240;
-      scrollRef.current.scrollTo({
-        left: scrollRef.current.scrollLeft + scrollAmount,
-        behavior: "smooth"
-      });
+
+      setIsSnappingActive(false);
+
+      scrollRef.current.scrollLeft += scrollAmount;
+
+      setTimeout(() => {
+        setIsSnappingActive(true);
+      }, 450);
     }
   };
+
 
   if (loading || categories.length === 0) {
     return (
@@ -121,8 +127,9 @@ export default function CategoriesSlider() {
         onTouchStart={handleDragStart}
         onTouchMove={handleDragMove}
         onTouchEnd={handleDragEnd}
-        className="w-full overflow-x-auto flex gap-6 sm:gap-8 py-2 scrollbar-none scroll-smooth snap-x cursor-grab active:cursor-grabbing select-none"
-        style={{ scrollbarWidth: "none"}}
+        className={`w-full overflow-x-auto flex gap-6 sm:gap-8 py-2 scrollbar-none scroll-smooth cursor-grab active:cursor-grabbing select-none ${isSnappingActive ? "snap-x snap-mandatory" : ""
+          }`}
+        style={{ scrollbarWidth: "none" }}
       >
         {categories.map((cat) => (
           <div

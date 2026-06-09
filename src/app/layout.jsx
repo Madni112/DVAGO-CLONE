@@ -12,6 +12,7 @@ import WishlistDrawer from "@/components/WishlistDrawer";
 import LoginPopup from "@/components/LoginPopup";
 import { supabase } from "@/Config/supabase";
 import "@/app/globals.css";
+import Footer from "@/components/footer";
 
 function AuthGatekeeper({ children }) {
   const [initializing, setInitializing] = useState(true);
@@ -52,22 +53,26 @@ export default function RootLayout({ children }) {
 
   return (
     <html lang="en" suppressHydrationWarning={true}>
-      <body className="bg-gray-50 text-gray-900 antialiased min-h-screen" suppressHydrationWarning={true}>
-        <AuthGatekeeper>
-          <OffCanvasProvider>
-            <WishlistProvider>
-              <CartProvider>
-                {!isLoginPage && <Navbar />}
-                {!isLoginPage && <Cart />}
-                {!isLoginPage && <WishlistDrawer />}
-                <LoginPopup />
-                <main className="w-full">{children}</main>
-              </CartProvider>
-            </WishlistProvider>
-          </OffCanvasProvider>
-        </AuthGatekeeper>
-        <Toaster position="top-center" reverseOrder={false} />
-      </body>
-    </html>
-  );
+      <head>
+        <title>DVAGO | CLONE</title>
+        </head>
+          <body className="bg-gray-50 text-gray-900 antialiased min-h-screen" suppressHydrationWarning={true}>
+            <AuthGatekeeper>
+              <OffCanvasProvider>
+                <WishlistProvider>
+                  <CartProvider>
+                    {!isLoginPage && <Navbar />}
+                    {!isLoginPage && <Cart />}
+                    {!isLoginPage && <WishlistDrawer />}
+                    <LoginPopup />
+                    <main className="w-full">{children}</main>
+                    <Footer/>
+                  </CartProvider>
+                </WishlistProvider>
+              </OffCanvasProvider>
+            </AuthGatekeeper>
+            <Toaster position="top-center" reverseOrder={false} />
+          </body>
+        </html>
+        );
 }

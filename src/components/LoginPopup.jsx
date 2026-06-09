@@ -48,15 +48,47 @@ export default function LoginPopup() {
         setIsRegisterMode(false);
         setPassword("");
       } else {
-        // Direct credential ingestion 
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        // 1. Log credentials in with Supabase Auth
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
 
         if (signInError) throw signInError;
 
-        toast.success("Welcome back! Loading secure layout...");
+        const user = signInData?.user;
+        if (!user) throw new Error("No user profile session returned.");
+
+        // 2. Fetch the user's role flag from your profiles metadata table
+        const { data: profile, error: profileError } = await supabase
+          .from("profiles")
+          .select("is_admin")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (profileError) {
+          await supabase.auth.signOut();
+          throw profileError;
+        }
+
+        // Determine if they are an admin based on profile flag or metadata role
+        const userIsAdmin = profile?.is_admin === true || user.app_metadata?.role === "admin";
+
+        // 3. 🎯 ENFORCE STRICT CROSS-PORTAL ROLE CHECK RULES
+        if (roleTab === "customer" && userIsAdmin) {
+          await supabase.auth.signOut(); // Force terminate unauthorized customer token
+          toast.error("Access Denied: Administrative accounts must log in using the Administrator tab.");
+          return;
+        }
+
+        if (roleTab === "administrator" && !userIsAdmin) {
+          await supabase.auth.signOut(); // Force terminate unauthorized admin token
+          toast.error("Access Denied: Customer accounts are restricted from accessing the Administrator panel.");
+          return;
+        }
+
+        // 4. Success path configuration
+        toast.success(userIsAdmin ? "Welcome Admin! Loading system control center..." : "Welcome back! Loading secure layout...");
         setLoginPopupOpen(false);
 
         // 🚀 ONE-TIME MANUAL REFRESH HYDRATES PROFILE SAFELY WITHOUT COLLISION CRASHES
@@ -85,7 +117,6 @@ export default function LoginPopup() {
 
   // 🎯 CONDITIONAL FLAGS MATCHING YOUR DESIGN RULES
   const isAdminTabActive = roleTab === "administrator";
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs select-none">
       <div className="absolute inset-0" onClick={() => setLoginPopupOpen(false)}></div>
