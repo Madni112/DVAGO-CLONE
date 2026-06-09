@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { supabase } from "@/Config/supabase";
 
 export default function CategoriesSlider() {
@@ -39,48 +38,48 @@ export default function CategoriesSlider() {
 
   const handleDragStart = (e) => {
     if (categories.length === 0) return;
+    
+    // Turn off mandatory snapping instantly so dragging feels perfectly smooth
+    setIsSnappingActive(false);
     setIsDragging(true);
     setHasMoved(false);
 
-    const clientX = e.type === "touchstart" ? e.touches.clientX : e.clientX;
+    const clientX = e.type === "touchstart" ? e.touches[0].clientX : e.clientX;
     setStartX(clientX - scrollRef.current.offsetLeft);
     setScrollLeftState(scrollRef.current.scrollLeft);
   };
 
   const handleDragMove = (e) => {
     if (!isDragging) return;
-    e.preventDefault();
 
-    const clientX = e.type === "touchmove" ? e.touches.clientX : e.clientX;
+    const clientX = e.type === "touchmove" ? e.touches[0].clientX : e.clientX;
     const x = clientX - scrollRef.current.offsetLeft;
     const walkDistance = (x - startX) * 1.5;
 
-    if (Math.abs(walkDistance) > 5) {
-      setHasMoved(true);
-    }
+    // 🎯 MOBILE TWITCH GUARD: Ignore tiny movements under 5px to prevent auto-scrolling back to start
+    if (Math.abs(walkDistance) < 5) return;
 
+    setHasMoved(true);
     scrollRef.current.scrollLeft = scrollLeftState - walkDistance;
   };
 
   const handleDragEnd = () => {
     setIsDragging(false);
+    // Turn snapping back on after letting go so items square up nicely
+    setIsSnappingActive(true);
     setTimeout(() => setHasMoved(false), 50);
   };
 
   const handleScrollClick = (direction) => {
     if (scrollRef.current) {
       const scrollAmount = direction === "next" ? 240 : -240;
-
       setIsSnappingActive(false);
-
       scrollRef.current.scrollLeft += scrollAmount;
-
       setTimeout(() => {
         setIsSnappingActive(true);
       }, 450);
     }
   };
-
 
   if (loading || categories.length === 0) {
     return (
@@ -91,6 +90,7 @@ export default function CategoriesSlider() {
       </div>
     );
   }
+
   return (
     <div className="w-full max-w-7xl mx-auto p-6 relative group select-none">
       <div className="flex justify-between items-center mb-6">
@@ -127,15 +127,16 @@ export default function CategoriesSlider() {
         onTouchStart={handleDragStart}
         onTouchMove={handleDragMove}
         onTouchEnd={handleDragEnd}
-        className={`w-full overflow-x-auto flex gap-6 sm:gap-8 py-2 scrollbar-none scroll-smooth cursor-grab active:cursor-grabbing select-none ${isSnappingActive ? "snap-x snap-mandatory" : ""
-          }`}
-        style={{ scrollbarWidth: "none" }}
+        // 🎯 touch-action: pan-y prevents vertical drag lock on mobile screens
+        className={`w-full overflow-x-auto flex gap-6 sm:gap-8 py-2 scrollbar-none cursor-grab active:cursor-grabbing select-none ${
+          isSnappingActive ? "snap-x snap-mandatory scroll-smooth" : ""
+        }`}
+        style={{ scrollbarWidth: "none", touchAction: "pan-y" }}
       >
         {categories.map((cat) => (
           <div
             key={cat.id}
-            snap-align="start"
-            className="flex-shrink-0"
+            className="flex-shrink-0 snap-start"
           >
             <div
               onClick={(e) => {
@@ -146,9 +147,8 @@ export default function CategoriesSlider() {
                 }
                 router.push(`/category/${cat.id}`);
               }}
-              className="flex flex-col items-center text-center cursor-pointer group/item w-[80px]  sm:w-[150px]"
+              className="flex flex-col items-center text-center cursor-pointer group/item w-[80px] sm:w-[150px]"
             >
-
               <div className="w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full border border-gray-100 flex items-center justify-center p-3 shadow-xs group-hover/item:shadow-md group-hover/item:border-pink-200 transition-all duration-300 transform group-hover/item:-translate-y-1">
                 <img
                   src={cat.image}
